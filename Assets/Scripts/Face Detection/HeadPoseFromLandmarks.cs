@@ -52,7 +52,7 @@ public class HeadPoseFromLandmarks : MonoBehaviour
         if (cameraTarget == null) return;
 
         // rotation
-        var targetRot = baseRot * Quaternion.Euler(targetPitchDeg, targetYawDeg, targetRollDeg);
+        var targetRot = baseRot * Quaternion.Euler(-targetPitchDeg, -targetYawDeg,- targetRollDeg);
         cameraTarget.rotation = Quaternion.Slerp(cameraTarget.rotation, targetRot, Time.deltaTime * rotLerp);
 
         // position with clamp inside 5x5
