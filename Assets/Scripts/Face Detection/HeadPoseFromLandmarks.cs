@@ -58,7 +58,7 @@ public class HeadPoseFromLandmarks : MonoBehaviour
         if (cameraTarget == null) return;
 
         // rotation
-        var targetRot = baseRot * Quaternion.Euler(targetPitchDeg, targetYawDeg, targetRollDeg);
+        var targetRot = baseRot * Quaternion.Euler(-targetPitchDeg, -targetYawDeg, -targetRollDeg);
         cameraTarget.rotation = Quaternion.Slerp(cameraTarget.rotation, targetRot, Time.deltaTime * rotLerp);
 
         // position with clamp inside 5x5
@@ -111,7 +111,7 @@ public class HeadPoseFromLandmarks : MonoBehaviour
             // depthNorm = (baselineZ - tz) / depthRangeZ
             float depthNorm = (baselineZ - tz) / Mathf.Max(1e-4f, depthRangeZ);
             if (invertDepth) depthNorm = -depthNorm;
-            depthNorm = Mathf.Clamp(depthNorm, -1f, 1f);
+            depthNorm = Mathf.Clamp(depthNorm, -2.5f, 2.5f);
 
             targetDollyZ = depthNorm * dollyZMax;
         }

@@ -12,6 +12,7 @@ namespace Mediapipe.Unity
   public class Screen : MonoBehaviour
   {
     [SerializeField] private RawImage _screen;
+    // [SerializeField] private Vector2 _faceW;
 
     private ImageSource _imageSource;
 
@@ -30,7 +31,7 @@ namespace Mediapipe.Unity
     {
       _imageSource = imageSource;
 
-      Resize(_imageSource.textureWidth, _imageSource.textureHeight);
+      // Resize(_imageSource.textureWidth, _imageSource.textureHeight);
       Rotate(_imageSource.rotation.Reverse());
       ResetUvRect(RunningMode.Async);
       texture = imageSource.GetCurrentTexture();
