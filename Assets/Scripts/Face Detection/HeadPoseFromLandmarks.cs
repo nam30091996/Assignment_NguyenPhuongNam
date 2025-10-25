@@ -29,6 +29,10 @@ public class HeadPoseFromLandmarks : MonoBehaviour
     public bool useDepthFromMatrix = true;   // bật dùng translation Z thay vì pitch
     public float depthRangeZ = 0.08f;        // khoảng biến thiên Z (đơn vị ma trận) quy về [-1..1]
     public bool invertDepth = false;         // nếu thấy tiến/lùi bị ngược, tick vào đây
+    [Header("Depth smoothing")]
+    [Range(0.01f, 1f)] public float depthEmaAlpha = 0.15f;  // EMA cho depth
+    [Range(0f, 0.2f)]  public float depthDeadzone = 0.02f;  // bỏ rung nhỏ
+    private float depthEma = 0f;                            // buffer EMA
 
     // internal
     private Quaternion baseRot;
@@ -100,26 +104,37 @@ public class HeadPoseFromLandmarks : MonoBehaviour
         if (useDepthFromMatrix)
         {
             // Translation lấy từ cột 3: (m03, m13, m23)
-            float tz = M.m23;  // Z của khuôn mặt trong hệ Unity (đã đổi dấu phù hợp trong Result)
+            float tz = M.m23;
 
             if (!hasDepthBaseline)
             {
-                baselineZ = tz; // tự động lấy lần đầu nếu chưa calibrate
+                baselineZ = tz;         // set baseline một lần (hoặc gọi CalibrateDepth() để set lại)
                 hasDepthBaseline = true;
             }
 
-            // depthNorm = (baselineZ - tz) / depthRangeZ
+            // Chuẩn hóa [-1..1]
             float depthNorm = (baselineZ - tz) / Mathf.Max(1e-4f, depthRangeZ);
-            if (invertDepth) depthNorm = -depthNorm;
-            depthNorm = Mathf.Clamp(depthNorm, -2.5f, 2.5f);
 
-            targetDollyZ = depthNorm * dollyZMax;
+            // Deadzone nhỏ để tránh rung
+            if (Mathf.Abs(depthNorm) < depthDeadzone) depthNorm = 0f;
+
+            // Clamp đúng biên chuẩn hóa
+            depthNorm = Mathf.Clamp(depthNorm, -1f, 1f);
+
+            if (invertDepth) depthNorm = -depthNorm;
+
+            // EMA smoothing cho độ sâu
+            depthEma = Mathf.Lerp(depthEma, depthNorm, depthEmaAlpha);
+
+            // Map sang dolly (biên độ nhỏ để không chạm clamp 5m x 5m)
+            targetDollyZ = depthEma * dollyZMax;   // ví dụ dollyZMax = 0.25
         }
         else
         {
-            // Fallback: dùng pitch để giả lập tiến/lùi (nhẹ)
             float pitchNorm = Mathf.Clamp(targetPitchDeg / Mathf.Max(1e-3f, pitchMax), -1f, 1f);
-            targetDollyZ = -pitchNorm * dollyZMax; // cúi (pitch +) -> tiến
+            // cũng có thể áp EMA nếu muốn:
+            depthEma = Mathf.Lerp(depthEma, -pitchNorm, depthEmaAlpha);
+            targetDollyZ = depthEma * dollyZMax;
         }
     }
 
