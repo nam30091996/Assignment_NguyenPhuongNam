@@ -16,7 +16,7 @@ public class HeadPoseFromLandmarks : MonoBehaviour
 
     [Header("Parallax & Dolly")]
     public float parallaxX = 0.30f;     // dịch ngang nhẹ theo yaw_norm
-    public float dollyZMax = 0.25f;     // tối đa tiến/lùi (mét)
+    public float dollyZMax = 2.5f;     // tối đa tiến/lùi (mét)
 
     [Header("Smoothing")]
     public float rotLerp = 10f;
