@@ -26,7 +26,8 @@
 
 [![Project Screen Shot][product-screenshot]](#)
 
-A VR-like experience that runs on a **regular monitor**. The Unity camera rotates with the user’s head (**yaw/pitch/roll**) and performs a subtle **forward/back dolly**, while staying **clamped** inside a **5 × 5 m** virtual space with a **1 × 1 m** empty center. Uses a **webcam** (no HMD or external sensors required).
+A VR-like experience that runs on a regular monitor. The Unity camera rotates with the user’s head and performs forward/backward movement while staying within a 5 × 5 m virtual space with a 1 × 1 m empty center. It uses a webcam (no HMD or external sensors required).</br>
+Users will experience a vast open grassland, accompanied by soothing music and natural ambient sounds.
 
 
 ### Built With
@@ -49,15 +50,13 @@ This section explains how the system converts MediaPipe Face Landmarker outputs 
 ### 1) Pose Source (MediaPipe Face Landmarker)
 
 - **Model & Outputs**
-  - Use **Face Landmarker v2** with `OutputFacialTransformationMatrixes = true`.
+  - Use default **Face Landmarker** of MediaPipeUnityPlugin.
   - Per frame, we read the **first face pose matrix** as a `Matrix4x4` \(Unity\):  
     - Rotation is encoded in the **columns** of the matrix.  
       - `forward = (m02, m12, m22)` → **Z column**  
       - `up      = (m01, m11, m21)` → **Y column**  
     - Translation is in the **fourth column**: `t = (m03, m13, m23)`.  
       - We use **`t.z`** as the **depth** signal (how near/far the head is).
-
-> If you see axes flipped (e.g., left/right reversed), flip the sign on the affected component (commonly `forward.x *= -1`).
 
 ---
 
@@ -79,13 +78,12 @@ This section explains how the system converts MediaPipe Face Landmarker outputs 
 ### Feature Summary
 - Head-driven camera: **yaw/pitch/roll** from face pose; **no HMD** required.  
 - Subtle **forward/back dolly** from pose **Z translation**.  
-- **Parallax** tied to yaw for depth cues.  
-- **5 × 5 m** bounded space with **1 × 1 m** empty center.  
+- **Parallax** tied to yaw for depth cues.
 - **Smoothing, deadzones, calibration** for stable motion.
 
 ### Testing Environment
 - **OS**: Windows 11 (x64)  
-- **Unity**: 2022.3 LTS  
+- **Unity**: Unity 6000.0.59f2
 - **Webcam**: 720p @ 30 FPS (good room lighting)  
 - **Inference**: CPU (PC plugin)  
 - **Display**: Standard monitor (no HMD)
@@ -101,4 +99,4 @@ This section explains how the system converts MediaPipe Face Landmarker outputs 
 [platform-url]: #
 [license-shield]: https://img.shields.io/badge/License-Evaluation%20Only-ef4444?style=for-the-badge
 [license-url]: #
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: demo/demo.mp4
