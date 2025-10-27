@@ -3,7 +3,7 @@ using Mediapipe.Tasks.Vision.FaceLandmarker;
 using System.Collections.Generic;
 
 /// Map Face Landmarker result -> Camera pose (yaw/pitch/roll + parallax/dolly).
-/// GỌI: poseCtrl.OnLandmarkResult(result) từ callback của runner.
+/// Call poseCtrl.OnLandmarkResult(result) from runner's callback.
 public class HeadPoseFromLandmarks : MonoBehaviour
 {
     [Header("Target to control (Main Camera or its rig)")]
@@ -15,8 +15,8 @@ public class HeadPoseFromLandmarks : MonoBehaviour
     [Range(0f, 60f)] public float rollMax  = 15f;
 
     [Header("Parallax & Dolly")]
-    public float parallaxX = 0.30f;     // dịch ngang nhẹ theo yaw_norm
-    public float dollyZMax = 2.5f;     // tối đa tiến/lùi (mét)
+    public float parallaxX = 0.30f;     // subtle lateral shift based on yaw_norm
+    public float dollyZMax = 2.5f;     // maximum forward/backward
 
     [Header("Smoothing")]
     public float rotLerp = 10f;
@@ -26,13 +26,13 @@ public class HeadPoseFromLandmarks : MonoBehaviour
     public float halfSize = 2.5f;
 
     [Header("Depth from pose translation Z")]
-    public bool useDepthFromMatrix = true;   // bật dùng translation Z thay vì pitch
-    public float depthRangeZ = 0.08f;        // khoảng biến thiên Z (đơn vị ma trận) quy về [-1..1]
-    public bool invertDepth = false;         // nếu thấy tiến/lùi bị ngược, tick vào đây
+    public bool useDepthFromMatrix = true;
+    public float depthRangeZ = 0.08f;
+    public bool invertDepth = false;
     [Header("Depth smoothing")]
-    [Range(0.01f, 1f)] public float depthEmaAlpha = 0.15f;  // EMA cho depth
-    [Range(0f, 0.2f)]  public float depthDeadzone = 0.02f;  // bỏ rung nhỏ
-    private float depthEma = 0f;                            // buffer EMA
+    [Range(0.01f, 1f)] public float depthEmaAlpha = 0.15f;
+    [Range(0f, 0.2f)]  public float depthDeadzone = 0.02f;
+    private float depthEma = 0f;
 
     // internal
     private Quaternion baseRot;
@@ -40,8 +40,7 @@ public class HeadPoseFromLandmarks : MonoBehaviour
 
     private volatile float targetYawDeg, targetPitchDeg, targetRollDeg;
     private volatile float targetParallaxX, targetDollyZ;
-
-    // lưu baseline Z (chuẩn trung tính) sau calibrate
+    
     private bool hasDepthBaseline = false;
     private float baselineZ = 0f;
 
@@ -72,16 +71,15 @@ public class HeadPoseFromLandmarks : MonoBehaviour
         cameraTarget.position = Vector3.Lerp(cameraTarget.position, targetPos, Time.deltaTime * posLerp);
     }
 
-    /// Gọi từ runner: runner.OnResult += poseCtrl.OnLandmarkResult;
     public void OnLandmarkResult(FaceLandmarkerResult result)
     {
         if (result.facialTransformationMatrixes == null || result.facialTransformationMatrixes.Count == 0)
             return;
 
-        // Lấy ma trận pose của mặt đầu tiên (Matrix4x4 Unity, đã chuyển trục đúng trong file Result)
+        // Get the pose matrix of the first face (Unity Matrix4x4, axes already converted in the Result file)
         var M = result.facialTransformationMatrixes[0];
 
-        // Orientation từ cột ma trận: forward = cột Z, up = cột Y
+        // Orientation from matrix columns: forward = Z column, up = Y column
         Vector3 forward = new Vector3(M.m02, M.m12, M.m22);
         Vector3 up      = new Vector3(M.m01, M.m11, M.m21);
 
@@ -96,52 +94,39 @@ public class HeadPoseFromLandmarks : MonoBehaviour
         targetPitchDeg = Mathf.Clamp(pitch, -pitchMax, pitchMax);
         targetRollDeg  = Mathf.Clamp(roll,  -rollMax,  rollMax);
 
-        // Parallax ngang theo yaw
+        // Horizontal parallax based on yaw
         float yawNorm = Mathf.Clamp(targetYawDeg / Mathf.Max(1e-3f, yawMax), -1f, 1f);
         targetParallaxX = yawNorm * parallaxX;
 
         // ---- DEPTH / DOLLY Z ----
         if (useDepthFromMatrix)
         {
-            // Translation lấy từ cột 3: (m03, m13, m23)
             float tz = M.m23;
 
             if (!hasDepthBaseline)
             {
-                baselineZ = tz;         // set baseline một lần (hoặc gọi CalibrateDepth() để set lại)
+                baselineZ = tz;
                 hasDepthBaseline = true;
             }
 
-            // Chuẩn hóa [-1..1]
             float depthNorm = (baselineZ - tz) / Mathf.Max(1e-4f, depthRangeZ);
 
-            // Deadzone nhỏ để tránh rung
             if (Mathf.Abs(depthNorm) < depthDeadzone) depthNorm = 0f;
 
-            // Clamp đúng biên chuẩn hóa
             depthNorm = Mathf.Clamp(depthNorm, -1f, 1f);
 
             if (invertDepth) depthNorm = -depthNorm;
 
-            // EMA smoothing cho độ sâu
             depthEma = Mathf.Lerp(depthEma, depthNorm, depthEmaAlpha);
 
-            // Map sang dolly (biên độ nhỏ để không chạm clamp 5m x 5m)
-            targetDollyZ = depthEma * dollyZMax;   // ví dụ dollyZMax = 0.25
+            targetDollyZ = depthEma * dollyZMax;
         }
         else
         {
             float pitchNorm = Mathf.Clamp(targetPitchDeg / Mathf.Max(1e-3f, pitchMax), -1f, 1f);
-            // cũng có thể áp EMA nếu muốn:
             depthEma = Mathf.Lerp(depthEma, -pitchNorm, depthEmaAlpha);
             targetDollyZ = depthEma * dollyZMax;
         }
-    }
-
-    /// Gọi hàm này khi bạn đứng tư thế trung tính để chốt baseline Z
-    public void CalibrateDepth()
-    {
-        hasDepthBaseline = false; // sẽ set baselineZ ở khung hình kế tiếp
     }
 
     // Helpers
