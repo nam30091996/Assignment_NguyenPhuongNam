@@ -48,29 +48,42 @@ This section explains how the system converts MediaPipe Face Landmarker outputs 
 ---
 
 ### 1) Pose Source (MediaPipe Face Landmarker)
+- Use the default `FaceLandmarkerRunner.cs` from `MediaPipeUnityPlugin` in **LIVE_STREAM** mode (webcam).
+- Every time MediaPipe renders the landmarks, the `FaceLandmarkerResult` is **forwarded** to my **HeadPoseFromLandmarks** script for pose processing:
 
-- **Model & Outputs**
-  - Use default **Face Landmarker** of MediaPipeUnityPlugin.
-  - Per frame, we read the **first face pose matrix** as a `Matrix4x4` \(Unity\):  
-    - Rotation is encoded in the **columns** of the matrix.  
-      - `forward = (m02, m12, m22)` → **Z column**  
-      - `up      = (m01, m11, m21)` → **Y column**  
-    - Translation is in the **fourth column**: `t = (m03, m13, m23)`.  
-      - We use **`t.z`** as the **depth** signal (how near/far the head is).
+```csharp
+[SerializeField] private HeadPoseFromLandmarks poseController;
+
+private void OnFaceLandmarkDetectionOutput(FaceLandmarkerResult result, Image image, long timestamp)
+{
+  _faceLandmarkerResultAnnotationController.DrawLater(result);
+  if (poseController != null) poseController.OnLandmarkResult(result);
+}
+```
 
 ---
 
 ### 2) Orientation → Camera Rotation
-
-- Build camera orientation from pose:
+- `HeadPoseFromLandmarks` receives the `FaceLandmarkerResult` sent by `FaceLandmarkerRunner`.
+- Read the face pose matrix from `result.facialTransformationMatrixes[0]`, extract forward/up from the Z/Y columns, build a quaternion, then get Euler angles:
   ```csharp
-  Quaternion headRot = Quaternion.LookRotation(forward, up);
-  Vector3 e = headRot.eulerAngles;
+  var M = result.facialTransformationMatrixes[0];
+  Vector3 forward = new Vector3(M.m02, M.m12, M.m22);
+  Vector3 up      = new Vector3(M.m01, M.m11, M.m21);
+  
+  var q = SafeLookRotation(forward, up);
+  var e = q.eulerAngles;
+  ```
+- From Euler, compute yaw/pitch/roll (normalized to [-180..180]) and clamp them to safe limits before applying to the camera:
+  ```csharp
   float yaw   = Normalize180(e.y);
   float pitch = Normalize180(e.x);
   float roll  = Normalize180(e.z);
-
-
+  
+  targetYawDeg   = Mathf.Clamp(yaw,   -yawMax,   yawMax);
+  targetPitchDeg = Mathf.Clamp(pitch, -pitchMax, pitchMax);
+  targetRollDeg  = Mathf.Clamp(roll,  -rollMax,  rollMax);
+  ```
 
 <!-- FEATURES & TESTING -->
 ## Feature Summary and Testing Environment
