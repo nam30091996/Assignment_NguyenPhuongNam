@@ -24,17 +24,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-<!-- Option A: relative path (works if the video stays in the repo at demo/demo.mp4) -->
-<video controls width="640" poster="demo/poster.png">
-  <source src="demo/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<!-- Option B: raw GitHub link to a specific commit (useful if you want a stable permalink) -->
-<video controls width="640" poster="https://raw.githubusercontent.com/nam30091996/SuperSell_HeadTracker/1e5c71192932bdeca941fe9ebcc9c39d1c57a0a1/demo/poster.png">
-  <source src="https://raw.githubusercontent.com/nam30091996/SuperSell_HeadTracker/1e5c71192932bdeca941fe9ebcc9c39d1c57a0a1/demo/demo.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+https://github.com/user-attachments/assets/1c3a2b27-7eb1-4fb9-ba34-2e167ceba03f
 
 A VR-like experience that runs on a regular monitor. The Unity camera rotates with the user’s head and performs forward/backward movement while staying within a 5 × 5 m virtual space with a 1 × 1 m empty center. It uses a webcam (no HMD or external sensors required).</br>
 Users will experience a vast open grassland, accompanied by soothing music and natural ambient sounds.
